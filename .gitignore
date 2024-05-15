@@ -1,0 +1,35 @@
+# Ignore virtual environments and other local project files.
+venv/
+__pycache__/
+
+# Ignore .editorconfig file, if it exists.
+.editorconfig
+
+# Ignore all directories starting with "dist" (e.g., from wheel package build).
+dist/
+
+# Ignore pip log files.
+pip-log.txt
+
+# Ignore IDE-specific files.
+*.iml
+*.ipynb
+*.iws
+.idea/
+.pydevproject
+
+# Ignore temporary and backup files.
+*~
+*.swp
+*.swo
+.#*
+
+# Ignore Python compiled bytecode files.
+*.pyc
+*.pyo
+
+# Ignore Django-specific settings files.
+local_settings.py
+
+config.yaml
+config.yaml

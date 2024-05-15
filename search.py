@@ -5,14 +5,15 @@ import yaml
 from termcolor import colored
 import os
 
+
 def load_config(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, "r") as file:
         config = yaml.safe_load(file)
         for key, value in config.items():
             os.environ[key] = value
 
-class WebSearcher:
 
+class WebSearcher:
     """
     A class that encapsulates methods for generating search queries, fetching search results,
     determining the best search pages, and scraping web content using the OpenAI API and other web services.
@@ -40,13 +41,14 @@ class WebSearcher:
         results_dict = searcher.use_tool(verbose=True, plan="Research new AI techniques", query="Latest trends in AI")
         results_dict will contain the URL as a key and the scraped content from that URL as the value.
     """
+
     def __init__(self, model, verbose=False):
-        load_config('config.yaml')
+        load_config("config.yaml")
         self.api_key = os.getenv("OPENAI_API_KEY")
-        self.url = 'https://api.openai.com/v1/chat/completions'
+        self.url = "https://api.openai.com/v1/chat/completions"
         self.headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {self.api_key}'
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
         }
         self.model = model
         self.verbose = verbose
@@ -64,12 +66,12 @@ class WebSearcher:
                         "properties": {
                             "search_engine_queries": {
                                 "type": "string",
-                                "description": "The most suitable search query for the plan"
+                                "description": "The most suitable search query for the plan",
                             },
                         },
-                        "required": ["search_engine_queries"]
-                    }
-                }
+                        "required": ["search_engine_queries"],
+                    },
+                },
             }
         ]
 
@@ -78,20 +80,20 @@ class WebSearcher:
             "messages": [{"role": "user", "content": f"Query:{query}\n\n Plan:{plan}"}],
             "temperature": 0,
             "tools": tools,
-            "tool_choice": "required"
+            "tool_choice": "required",
         }
 
         json_data = json.dumps(data)
         response = requests.post(self.url, headers=self.headers, data=json_data)
         response_dict = response.json()
 
-        tool_calls = response_dict['choices'][0]['message']['tool_calls'][0]
-        arguments_json = json.loads(tool_calls['function']['arguments'])
-        search_queries = arguments_json['search_engine_queries']
-        print(colored(f"Search Engine Queries:, {search_queries}", 'yellow'))
+        tool_calls = response_dict["choices"][0]["message"]["tool_calls"][0]
+        arguments_json = json.loads(tool_calls["function"]["arguments"])
+        search_queries = arguments_json["search_engine_queries"]
+        print(colored(f"Search Engine Queries:, {search_queries}", "yellow"))
 
         return search_queries
-    
+
     def get_search_page(self, search_results, plan, query):
 
         tools = [
@@ -105,101 +107,116 @@ class WebSearcher:
                         "properties": {
                             "best_search_page": {
                                 "type": "string",
-                                "description": "The URL link of best search page based on the Search Results, Plan and Query. Do not select pdf files."
+                                "description": "The URL link of best search page based on the Search Results, Plan and Query. Do not select pdf files.",
                             },
                         },
-                        "required": ["best_search_page"]
-                    }
-                }
+                        "required": ["best_search_page"],
+                    },
+                },
             }
         ]
 
         data = {
             "model": self.model,
-            "messages": [{"role": "user", "content": f"Query:{query}\n\n Plan:{plan} \n\n Search Results:{search_results}"}],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"Query:{query}\n\n Plan:{plan} \n\n Search Results:{search_results}",
+                }
+            ],
             "temperature": 0,
             "tools": tools,
-            "tool_choice": "required"
+            "tool_choice": "required",
         }
 
         json_data = json.dumps(data)
         response = requests.post(self.url, headers=self.headers, data=json_data)
         response_dict = response.json()
 
-        tool_calls = response_dict['choices'][0]['message']['tool_calls'][0]
-        arguments_json = json.loads(tool_calls['function']['arguments'])
-        search_queries = arguments_json['best_search_page']
-        print(colored(f"Best Pages:, {search_queries}", 'yellow'))
+        tool_calls = response_dict["choices"][0]["message"]["tool_calls"][0]
+        arguments_json = json.loads(tool_calls["function"]["arguments"])
+        search_queries = arguments_json["best_search_page"]
+        print(colored(f"Best Pages:, {search_queries}", "yellow"))
 
         return search_queries
-    
+
     def format_results(self, organic_results):
 
         result_strings = []
         for result in organic_results:
-            title = result.get('title', 'No Title')
-            link = result.get('link', '#')
-            snippet = result.get('snippet', 'No snippet available.')
-            result_strings.append(f"Title: {title}\nLink: {link}\nSnippet: {snippet}\n---")
-        
-        return '\n'.join(result_strings)
-    
-    def fetch_search_results(self, search_queries: str):
+            title = result.get("title", "No Title")
+            link = result.get("link", "#")
+            snippet = result.get("snippet", "No snippet available.")
+            result_strings.append(
+                f"Title: {title}\nLink: {link}\nSnippet: {snippet}\n---"
+            )
 
-        search_url = "https://google.serper.dev/search"
+        return "\n".join(result_strings)
+
+    def fetch_search_results(self, search_queries: str):
+        api_key = os.environ[
+            "GOOGLE_CSE_API_KEY"
+        ]  # Ensure this environment variable is set with your API key
+        cse_id = os.environ[
+            "GOOGLE_CSE_ID"
+        ]  # Ensure this environment variable is set with your CSE ID
+
+        search_url = f"https://www.googleapis.com/customsearch/v1"
         headers = {
-            'Content-Type': 'application/json',
-            'X-API-KEY': os.environ['SERPER_DEV_API_KEY']  # Ensure this environment variable is set with your API key
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
         }
-        payload = json.dumps({"q": search_queries})
-        
+        payload = json.dumps({"q": search_queries, "cx": cse_id})
+
         # Attempt to make the HTTP POST request
         try:
             response = requests.post(search_url, headers=headers, data=payload)
             response.raise_for_status()  # Raise an HTTPError for bad responses (4XX, 5XX)
             results = response.json()
-            
-            # Check if 'organic' results are in the response
-            if 'organic' in results:
-                return self.format_results(results['organic'])
-            else:
-                return "No organic results found."
 
-        except requests.exceptions.HTTPError as http_err:
+            # Check if 'items' are in the response
+            if "items" in results:
+                return self.format_results(results["items"])
+            else:
+                return "No search results found."
+
+        except requests.exceptions.HTTPErrors as http_err:
             return f"HTTP error occurred: {http_err}"
         except requests.exceptions.RequestException as req_err:
             return f"Request exception occurred: {req_err}"
         except KeyError as key_err:
             return f"Key error in handling response: {key_err}"
-        
+
     def scrape_website_content(self, website_url):
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': 'https://www.google.com/',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Accept-Encoding': 'gzip, deflate, br'
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.google.com/",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Accept-Encoding": "gzip, deflate, br",
         }
-        
+
         try:
             # Making a GET request to the website
             response = requests.get(website_url, headers=headers, timeout=15)
             response.raise_for_status()  # This will raise an exception for HTTP errors
 
             # Parsing the page content using BeautifulSoup
-            soup = BeautifulSoup(response.content, 'html.parser')
-            text = soup.get_text(separator='\n')
+            soup = BeautifulSoup(response.content, "html.parser")
+            text = soup.get_text(separator="\n")
             # Cleaning up the text: removing excess whitespace
-            clean_text = '\n'.join([line.strip() for line in text.splitlines() if line.strip()])
+            clean_text = "\n".join(
+                [line.strip() for line in text.splitlines() if line.strip()]
+            )
 
             return {website_url: clean_text}
 
         except requests.exceptions.RequestException as e:
             print(f"Error retrieving content from {website_url}: {e}")
             return {website_url: f"Failed to retrieve content due to an error: {e}"}
-    
+
     def use_tool(self, plan=None, query=None):
 
         search = WebSearcher(self.model)
@@ -212,13 +229,13 @@ class WebSearcher:
         results_dict = search.scrape_website_content(best_page)
 
         if self.verbose:
-            print(colored(f"SEARCH RESULTS {search_results}", 'yellow'))
-            print(colored(f"RESULTS DICT {results_dict}", 'yellow'))
+            print(colored(f"SEARCH RESULTS {search_results}", "yellow"))
+            print(colored(f"RESULTS DICT {results_dict}", "yellow"))
 
         return results_dict
-        
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
 
     search = WebSearcher()
     search.use_tool()
